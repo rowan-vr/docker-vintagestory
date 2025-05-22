@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vintagestory-data-claim
+spec:
+  storageClassName: local-hostpath
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vintagestory-server
+spec:
+  ports:
+    - port: 42420
+      targetPort: 42420
+  selector:
+    app: vintagestory-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vintagestory-server
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+      matchLabels:
+        app: vintagestory-server
+  template:
+    metadata:
+      labels:
+        app: vintagestory-server
+    spec:
+      containers:
+      - name: vintagestory-server
+        image: repo.tippie.me/vintagestory-server:v1.20.10
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 42420
+        env:
+          - name: VS_DATA_PATH
+            value: "/gamedata"
+        volumeMounts:
+          - name: vintagestory-data
+            mountPath: /gamedata
+      imagePullSecrets:
+        - name: tippieregcred
+      volumes:
+        - name: vintagestory-data
+          persistentVolumeClaim:
+            claimName: vintagestory-data-claim
